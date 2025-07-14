@@ -248,7 +248,7 @@ def create_file(path: str, content: str):
     file_path.parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
-    console.print(f"[bold magenta]✓[/bold magenta] Created/updated file at '[bright_cyan]{file_path}[/bright_cyan]'")
+    console.print(f"[bold magenta]📋[/bold magenta] Mission file created at '[bright_cyan]{file_path}[/bright_cyan]'")
 
 def show_diff_table(files_to_edit: List[FileToEdit]) -> None:
     if not files_to_edit:
@@ -274,16 +274,16 @@ def apply_diff_edit(path: str, original_snippet: str, new_snippet: str):
         if occurrences == 0:
             raise ValueError("Original snippet not found")
         if occurrences > 1:
-            console.print(f"[bold yellow]⚠ Multiple matches ({occurrences}) found - requiring line numbers for safety[/bold yellow]")
+            console.print(f"[bold yellow]🚨 Multiple targets detected ({occurrences}) - precision required for safety[/bold yellow]")
             console.print("[dim]Use format:\n--- original.py (lines X-Y)\n+++ modified.py[/dim]")
             raise ValueError(f"Ambiguous edit: {occurrences} matches")
         
         updated_content = content.replace(original_snippet, new_snippet, 1)
         create_file(path, updated_content)
-        console.print(f"[bold magenta]✓[/bold magenta] Applied diff edit to '[bright_cyan]{path}[/bright_cyan]'")
+        console.print(f"[bold magenta]🔧[/bold magenta] Mission parameters updated in '[bright_cyan]{path}[/bright_cyan]'")
 
     except FileNotFoundError:
-        console.print(f"[bold red]✗[/bold red] File not found for diff editing: '[bright_cyan]{path}[/bright_cyan]'")
+        console.print(f"[bold red]🚨[/bold red] Target file not located: '[bright_cyan]{path}[/bright_cyan]'")
     except ValueError as e:
         console.print(f"[bold yellow]⚠[/bold yellow] {str(e)} in '[bright_cyan]{path}[/bright_cyan]'. No changes made.")
         console.print("\n[bold magenta]Expected snippet:[/bold magenta]")
@@ -307,14 +307,14 @@ def try_handle_add_command(user_input: str) -> bool:
                     "role": "system",
                     "content": f"Content of file '{normalized_path}':\n\n{content}"
                 })
-                console.print(f"[bold magenta]✓[/bold magenta] Added file '[bright_cyan]{normalized_path}[/bright_cyan]' to conversation.\n")
+                console.print(f"[bold magenta]📁[/bold magenta] Intel file '[bright_cyan]{normalized_path}[/bright_cyan]' added to briefing.\n")
         except OSError as e:
-            console.print(f"[bold red]✗[/bold red] Could not add path '[bright_cyan]{path_to_add}[/bright_cyan]': {e}\n")
+            console.print(f"[bold red]🚨[/bold red] Access denied to path '[bright_cyan]{path_to_add}[/bright_cyan]': {e}\n")
         return True
     return False
 
 def add_directory_to_conversation(directory_path: str):
-    with console.status("[bold bright_magenta]🔍 Scanning directory...[/bold bright_magenta]") as status:
+    with console.status("[bold bright_magenta]🔍 Surveillance sweep in progress...[/bold bright_magenta]") as status:
         excluded_files = {
             # Python specific
             ".DS_Store", "Thumbs.db", ".gitignore", ".python-version",
@@ -366,7 +366,7 @@ def add_directory_to_conversation(directory_path: str):
                 console.print(f"[bold yellow]⚠[/bold yellow] Reached maximum file limit ({max_files})")
                 break
 
-            status.update(f"[bold bright_magenta]🔍 Scanning {root}...[/bold bright_magenta]")
+            status.update(f"[bold bright_magenta]🔍 Infiltrating {root}...[/bold bright_magenta]")
             # Skip hidden directories and excluded directories
             dirs[:] = [d for d in dirs if not d.startswith('.') and d not in excluded_files]
 
@@ -408,13 +408,13 @@ def add_directory_to_conversation(directory_path: str):
                 except OSError:
                     skipped_files.append(full_path)
 
-        console.print(f"[bold magenta]✓[/bold magenta] Added folder '[bright_cyan]{directory_path}[/bright_cyan]' to conversation.")
+        console.print(f"[bold magenta]📁[/bold magenta] Intelligence gathered from '[bright_cyan]{directory_path}[/bright_cyan]' - mission briefing updated.")
         if added_files:
-            console.print(f"\n[bold bright_magenta]📁 Added files:[/bold bright_magenta] [dim]({len(added_files)} of {total_files_processed})[/dim]")
+            console.print(f"\n[bold bright_magenta]📁 Secured intel files:[/bold bright_magenta] [dim]({len(added_files)} of {total_files_processed})[/dim]")
             for f in added_files:
                 console.print(f"  [bright_cyan]📄 {f}[/bright_cyan]")
         if skipped_files:
-            console.print(f"\n[bold yellow]⏭ Skipped files:[/bold yellow] [dim]({len(skipped_files)})[/dim]")
+            console.print(f"\n[bold yellow]⏭ Files bypassed (classified/irrelevant):[/bold yellow] [dim]({len(skipped_files)})[/dim]")
             for f in skipped_files[:10]:  # Show only first 10 to avoid clutter
                 console.print(f"  [yellow dim]⚠ {f}[/yellow dim]")
             if len(skipped_files) > 10:
@@ -445,7 +445,7 @@ def ensure_file_in_context(file_path: str) -> bool:
             })
         return True
     except OSError:
-        console.print(f"[bold red]✗[/bold red] Could not read file '[bright_cyan]{file_path}[/bright_cyan]' for editing context")
+        console.print(f"[bold red]🚨[/bold red] Unable to access file '[bright_cyan]{file_path}[/bright_cyan]' for mission context")
         return False
 
 def normalize_path(path_str: str) -> str:
@@ -528,7 +528,7 @@ def execute_exa_search(arguments: Dict[str, Any]) -> str:
         return "Error: Exa client is not configured. Please install exa-py and set EXA_API_KEY."
     query = arguments["query"]
     try:
-        console.print(f"[bright_magenta]→ Searching Exa for:[/bright_magenta] [dim]{query}[/dim]")
+        console.print(f"[bright_magenta]🔍 Deploying reconnaissance for:[/bright_magenta] [dim]{query}[/dim]")
         search_results = exa_client.search_and_contents(
             query,
             use_autoprompt=True,
@@ -597,14 +597,14 @@ def kimi_chat_with_tools(user_message: str):
                 # Add assistant message to context
                 conversation_history.append(choice.message)
                 
-                console.print(f"\n[bold bright_magenta]⚡ Executing {len(choice.message.tool_calls)} function call(s)...[/bold bright_magenta]")
+                console.print(f"\n[bold bright_magenta]⚡ Deploying {len(choice.message.tool_calls)} gadget(s)...[/bold bright_magenta]")
                 
                 # Execute each tool call
                 for tool_call in choice.message.tool_calls:
                     tool_call_name = tool_call.function.name
                     tool_call_arguments = json.loads(tool_call.function.arguments)
                     
-                    console.print(f"[bright_magenta]→ {tool_call_name}[/bright_magenta]")
+                    console.print(f"[bright_magenta]🔧 {tool_call_name}[/bright_magenta]")
                     
                     try:
                         tool_function = tool_map[tool_call_name]
@@ -619,7 +619,7 @@ def kimi_chat_with_tools(user_message: str):
                         })
                         
                     except Exception as e:
-                        console.print(f"[red]Error executing {tool_call_name}: {e}[/red]")
+                        console.print(f"[red]🚨 Gadget malfunction {tool_call_name}: {e}[/red]")
                         conversation_history.append({
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -628,7 +628,7 @@ def kimi_chat_with_tools(user_message: str):
                         })
             else:
                 # Final response - display it
-                console.print(f"\n[bold bright_magenta]🤖 Kimi>[/bold bright_magenta] {choice.message.content}")
+                console.print(f"\n[bold bright_magenta]🕵️ Agent>[/bold bright_magenta] {choice.message.content}")
                 # Add final response to conversation history
                 conversation_history.append(choice.message)
         
@@ -636,7 +636,7 @@ def kimi_chat_with_tools(user_message: str):
         
     except Exception as e:
         error_msg = f"Kimi API error: {str(e)}"
-        console.print(f"\n[bold red]❌ {error_msg}[/bold red]")
+        console.print(f"\n[bold red]🚨 Mission failed: {error_msg}[/bold red]")
         return {"error": error_msg}
 
 # --------------------------------------------------------------------------------
@@ -645,48 +645,48 @@ def kimi_chat_with_tools(user_message: str):
 
 def main():
     # Create a beautiful gradient-style welcome panel
-    welcome_text = """[bold bright_magenta]🌙 Kimi Engineer[/bold bright_magenta] [bright_cyan]with Function Calling[/bright_cyan]
-[dim magenta]Powered by Kimi-K2 via OpenRouter[/dim magenta]"""
+    welcome_text = """[bold bright_magenta]🕵️ Secret Agent Engineer[/bold bright_magenta] [bright_cyan]with Advanced Gadgets[/bright_cyan]
+[dim magenta]Powered by classified AI technology[/dim magenta]"""
     
     console.print(Panel.fit(
         welcome_text,
         border_style="bright_magenta",
         padding=(1, 2),
-        title="[bold bright_cyan]🤖 AI Code Assistant[/bold bright_cyan]",
+        title="[bold bright_cyan]🕵️ Covert Operations Terminal[/bold bright_cyan]",
         title_align="center"
     ))
     
     # Create an elegant instruction panel
-    instructions = """[bold bright_magenta]📁 File Operations:[/bold bright_magenta]
-  • [bright_cyan]/add path/to/file[/bright_cyan] - Include a single file in conversation
-  • [bright_cyan]/add path/to/folder[/bright_cyan] - Include all files in a folder
-  • [dim]The AI can automatically read and create files using function calls[/dim]
+    instructions = """[bold bright_magenta]📁 Intelligence Gathering:[/bold bright_magenta]
+  • [bright_cyan]/add path/to/file[/bright_cyan] - Secure single file for mission briefing
+  • [bright_cyan]/add path/to/folder[/bright_cyan] - Infiltrate and gather all intel from location
+  • [dim]Agent can deploy gadgets automatically for recon and operations[/dim]
 
-[bold bright_magenta]🎯 Commands:[/bold bright_magenta]
-  • [bright_cyan]exit[/bright_cyan] or [bright_cyan]quit[/bright_cyan] - End the session
-  • Just ask naturally - the AI will handle file operations automatically!"""
+[bold bright_magenta]🎯 Mission Commands:[/bold bright_magenta]
+  • [bright_cyan]exit[/bright_cyan] or [bright_cyan]quit[/bright_cyan] - Abort mission and extract
+  • Communicate naturally - your agent will deploy the right tools for the job!"""
     
     console.print(Panel(
         instructions,
         border_style="magenta",
         padding=(1, 2),
-        title="[bold magenta]💡 How to Use[/bold magenta]",
+        title="[bold magenta]🕵️ Mission Briefing[/bold magenta]",
         title_align="left"
     ))
     console.print()
 
     while True:
         try:
-            user_input = prompt_session.prompt("🌙 You> ").strip()
+            user_input = prompt_session.prompt("🕵️ HQ> ").strip()
         except (EOFError, KeyboardInterrupt):
-            console.print("\n[bold yellow]👋 Exiting gracefully...[/bold yellow]")
+            console.print("\n[bold yellow]🚁 Emergency extraction initiated...[/bold yellow]")
             break
 
         if not user_input:
             continue
 
         if user_input.lower() in ["exit", "quit"]:
-            console.print("[bold bright_magenta]👋 Goodbye! Happy coding![/bold bright_magenta]")
+            console.print("[bold bright_magenta]🕵️ Mission complete. Agent signing off![/bold bright_magenta]")
             break
 
         if try_handle_add_command(user_input):
@@ -695,9 +695,9 @@ def main():
         response_data = kimi_chat_with_tools(user_input)
         
         if response_data.get("error"):
-            console.print(f"[bold red]❌ Error: {response_data['error']}[/bold red]")
+            console.print(f"[bold red]🚨 Mission critical error: {response_data['error']}[/bold red]")
 
-    console.print("[bold magenta]✨ Session finished. Thank you for using Kimi Engineer![/bold magenta]")
+    console.print("[bold magenta]🕵️ Operation concluded. Agent extracted safely![/bold magenta]")
 
 if __name__ == "__main__":
     main()
