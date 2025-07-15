@@ -1,11 +1,11 @@
 [project]
 name = "kimi-possible"
 version = "0.1.0"
-description = "An AI code assistant with function calling, powered by Kimi-K2 via OpenRouter."
+description = "AI research assistant and code helper with web search capabilities, powered by Kimi-K2 via OpenRouter."
 requires-python = ">=3.8"
 dependencies = [
     "openai",
-    "pydantic",
+    "pydantic", 
     "python-dotenv",
     "rich",
     "prompt-toolkit",

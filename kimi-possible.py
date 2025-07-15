@@ -750,7 +750,7 @@ def main():
 
     while True:
         try:
-            user_input = prompt_session.prompt("💜 You> ").strip()
+            user_input = prompt_session.prompt("You> ").strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\n[bold yellow]👋 Exiting gracefully...[/bold yellow]")
             break
