@@ -16,14 +16,15 @@ from rich.style import Style
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style as PromptStyle
 import time
+import requests
 
 # Initialize Rich console and prompt session
 console = Console()
 prompt_session = PromptSession(
     style=PromptStyle.from_dict({
-        'prompt': '#ff6b6b bold',  # Bright red-pink prompt for Kimi
-        'completion-menu.completion': 'bg:#8b5cf6 fg:#ffffff',
-        'completion-menu.completion.current': 'bg:#a855f7 fg:#ffffff bold',
+        "prompt": "#ff6b6b bold",  # Bright red-pink prompt for Kimi
+        "completion-menu.completion": "bg:#8b5cf6 fg:#ffffff",
+        "completion-menu.completion.current": "bg:#a855f7 fg:#ffffff bold",
     })
 )
 
@@ -182,6 +183,23 @@ tools = [
                 "required": ["query"]
             },
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "live_search",
+            "description": "Perform a live search on X (formerly Twitter) using x.ai's Live Search API.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query."
+                    }
+                },
+                "required": ["query"]
+            },
+        }
     }
 ]
 
@@ -207,6 +225,7 @@ system_PROMPT = dedent("""
        - create_multiple_files: Create multiple files at once
        - edit_file: Make precise edits to existing files using snippet replacement
        - exa_search: Perform a web search for up-to-date information
+       - live_search: Perform a live search using x.ai's API for real-time information.
 
     Guidelines:
     1. Provide natural, conversational responses explaining your reasoning
@@ -477,6 +496,7 @@ tool_map = {
     "create_multiple_files": lambda args: execute_create_multiple_files(args),
     "edit_file": lambda args: execute_edit_file(args),
     "exa_search": lambda args: execute_exa_search(args),
+    "live_search": lambda args: execute_live_search(args),
 }
 
 def execute_read_file(arguments: Dict[str, Any]) -> str:
@@ -546,6 +566,48 @@ def execute_exa_search(arguments: Dict[str, Any]) -> str:
     except Exception as e:
         return f"Error performing Exa search: {e}"
 
+
+def execute_live_search(arguments: Dict[str, Any]) -> str:
+    api_key = os.getenv("X_API_KEY")
+    if not api_key:
+        return "Error: X_API_KEY not found in .env file. Please add it to use Live Search."
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "query": arguments["query"],
+        "data_sources": ["x"],  # Restrict results to Twitter only
+        "search_depth": "advanced"
+    }
+
+    try:
+        console.print(f"[bright_magenta]🔍 Performing X.ai Live Search for:[/bright_magenta] [dim]{arguments['query']}[/dim]")
+        response = requests.post("https://api.x.ai/v1/search", headers=headers, json=payload)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        formatted_results = f"Live search results for '{arguments['query']}':\n\n"
+        if not data.get("results"):
+            return "No results found from Live Search."
+
+        for result in data["results"]:
+            formatted_results += f"Title: {result.get('title', 'N/A')}\n"
+            formatted_results += f"URL: {result.get('url', 'N/A')}\n"
+            formatted_results += f"Snippet: {result.get('snippet', 'N/A')}\n\n"
+        
+        return formatted_results.strip()
+
+    except requests.exceptions.HTTPError as e:
+        return f"Error performing live search: HTTP {e.response.status_code} - {e.response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error performing live search: {e}"
+    except Exception as e:
+        return f"An unexpected error occurred during live search: {e}"
+
 # --------------------------------------------------------------------------------
 # 7. Kimi API interaction (adapted from tool calling example)
 # --------------------------------------------------------------------------------
@@ -575,10 +637,14 @@ def kimi_chat_with_tools(user_message: str):
     trim_conversation_history()
     
     finish_reason = None
+    max_iterations = 5
+    iteration = 0
     
     try:
         # Use Kimi's tool calling pattern
-        while finish_reason is None or finish_reason == "tool_calls":
+        while (finish_reason is None or finish_reason == "tool_calls") and iteration < max_iterations:
+            iteration += 1
+            console.print(f"[dim]Debug: Tool call iteration {iteration}[/dim]")
             completion = client.chat.completions.create(
                 model="moonshotai/kimi-k2",
                 messages=conversation_history,
@@ -592,6 +658,7 @@ def kimi_chat_with_tools(user_message: str):
             
             choice = completion.choices[0]
             finish_reason = choice.finish_reason
+            console.print(f"[dim]Debug: Finish reason: {finish_reason}[/dim]")
             
             if finish_reason == "tool_calls":
                 # Add assistant message to context
@@ -631,6 +698,10 @@ def kimi_chat_with_tools(user_message: str):
                 console.print(f"\n[bold bright_magenta]🕵️‍♀️ Kimi>[/bold bright_magenta] {choice.message.content}")
                 # Add final response to conversation history
                 conversation_history.append(choice.message)
+        
+        if iteration >= max_iterations:
+            console.print("[bold yellow]⚠ Max tool call iterations reached. Possible loop detected.[/bold yellow]")
+            return {"error": "Max tool call iterations exceeded"}
         
         return {"success": True}
         
