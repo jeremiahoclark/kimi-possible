@@ -1,0 +1,11 @@
+{
+  "domain": "content_research", 
+  "research_targets": [
+    "Reddit discussions",
+    "Letterboxd reviews",
+    "X.com/Twitter reactions",
+    "Rotten Tomatoes scores",
+    "IMDB user reviews",
+    "YouTube comments"
+  ]
+}

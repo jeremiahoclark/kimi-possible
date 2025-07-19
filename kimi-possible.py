@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import argparse
 from pathlib import Path
 from textwrap import dedent
 from typing import List, Dict, Any, Optional
@@ -206,8 +207,11 @@ tools = [
 # --------------------------------------------------------------------------------
 # 3. System prompt adapted for Kimi
 # --------------------------------------------------------------------------------
-system_PROMPT = dedent("""
-    You are Kimi Possible, a research assistant who can browse the web and analyze code.
+def get_system_prompt(domain: str = "general", research_targets: List[str] = None) -> str:
+    """Generate a flexible system prompt based on domain and research targets."""
+    
+    base_prompt = dedent("""
+    You are Kimi Possible, a versatile research assistant and code analyst.
 
     CORE CAPABILITIES:
     1. Code Analysis & File Operations:
@@ -218,31 +222,128 @@ system_PROMPT = dedent("""
        - edit_file: Make precise edits to existing files using snippet replacement
 
     2. Web Research:
-       - exa_search: Use for general web search, Reddit, Letterboxd, Rotten Tomatoes, news sites
-       - live_search: Use ONLY for X.com/Twitter searches (automatically sources from X only)
-
-    SEARCH STRATEGY FOR CONTENT RESEARCH:
-    When asked to find reactions to movies/TV shows/content:
-
-    1. **Reddit**: Use exa_search with `"{title}" reddit discussion"`
-    2. **Letterboxd**: Use exa_search with `"{title}" letterboxd reviews"` (skip for TV shows)
-    3. **X.com/Twitter**: Use live_search with `"{title}"` or `"{title} reactions"`
-    4. **Rotten Tomatoes**: Use exa_search with `"{title}" site:rottentomatoes.com"`
+       - exa_search: General web search across multiple platforms and sources
+       - live_search: Real-time X.com/Twitter searches (automatically sources from X only)
 
     TOOL SELECTION RULES:
     - For X.com/Twitter content → live_search
-    - For everything else (Reddit, Letterboxd, RT, general web) → exa_search
+    - For all other web research → exa_search
     - For file operations → appropriate file tools
     - Always read files before editing them
+    """)
+    
+    # Add domain-specific strategies
+    if domain == "content_research":
+        domain_strategy = dedent("""
+        CONTENT RESEARCH STRATEGY:
+        When researching movies/TV shows/entertainment:
+        1. **Reddit**: Use exa_search with `"{title}" reddit discussion"`
+        2. **Letterboxd**: Use exa_search with `"{title}" letterboxd reviews"` (movies only)
+        3. **X.com/Twitter**: Use live_search with `"{title}"` or `"{title} reactions"`
+        4. **Rotten Tomatoes**: Use exa_search with `"{title}" site:rottentomatoes.com"`
+        
+        RESEARCH APPROACH:
+        - Extract individual user opinions/reviews from each source
+        - Capture usernames, ratings, sentiment, and review excerpts
+        - Provide overall sentiment summary
+        """)
+    elif domain == "technical_research":
+        domain_strategy = dedent("""
+        TECHNICAL RESEARCH STRATEGY:
+        When researching technical topics:
+        1. **Documentation**: Use exa_search with official docs and API references
+        2. **Stack Overflow**: Use exa_search with `"{topic}" site:stackoverflow.com"`
+        3. **GitHub**: Use exa_search with `"{topic}" site:github.com"`
+        4. **Technical Blogs**: Use exa_search for in-depth analysis
+        
+        RESEARCH APPROACH:
+        - Focus on authoritative sources and official documentation
+        - Look for code examples and implementation details
+        - Verify information across multiple reliable sources
+        """)
+    elif domain == "market_research":
+        domain_strategy = dedent("""
+        MARKET RESEARCH STRATEGY:
+        When researching market trends and business:
+        1. **News Sources**: Use exa_search for recent developments
+        2. **Industry Reports**: Use exa_search with specific report sites
+        3. **Social Sentiment**: Use live_search for real-time opinions
+        4. **Company Data**: Use exa_search for official company information
+        
+        RESEARCH APPROACH:
+        - Gather quantitative data and qualitative insights
+        - Look for trends, patterns, and market indicators
+        - Cross-reference multiple authoritative sources
+        """)
+    else:
+        domain_strategy = dedent("""
+        GENERAL RESEARCH STRATEGY:
+        Adapt your approach based on the specific research request:
+        - Use exa_search for comprehensive web research
+        - Use live_search for real-time social media insights
+        - Combine multiple sources for thorough analysis
+        - Tailor search queries to the specific domain and context
+        """)
+    
+    # Add custom research targets if provided
+    targets_section = ""
+    if research_targets:
+        targets_list = "\n".join([f"    - {target}" for target in research_targets])
+        targets_section = f"\n    CUSTOM RESEARCH TARGETS:\n{targets_list}\n"
+    
+    closing = dedent("""
+    Remember: You're a senior engineer and research assistant - be precise, thorough, and explain your reasoning clearly. Adapt your approach based on the specific task and domain.
+    """)
+    
+    return base_prompt + domain_strategy + targets_section + closing
 
-    RESEARCH APPROACH:
-    - Extract individual user opinions/reviews from each source
-    - Capture usernames, ratings, sentiment, and review excerpts
-    - Provide overall sentiment summary
-    - Be efficient: pick first good match, don't over-analyze
+# Configuration class for domain settings
+class KimiConfig:
+    def __init__(self, domain: str = "general", research_targets: List[str] = None):
+        self.domain = domain
+        self.research_targets = research_targets or []
+        self.system_prompt = get_system_prompt(domain, research_targets)
 
-    Remember: You're a senior engineer and research assistant - be precise, thorough, and explain your reasoning clearly.
-""")
+def parse_args():
+    """Parse command line arguments for domain configuration."""
+    parser = argparse.ArgumentParser(description="Kimi Possible - AI Research Assistant")
+    parser.add_argument(
+        "--domain", 
+        choices=["general", "content_research", "technical_research", "market_research"],
+        default="general",
+        help="Research domain specialization (default: general)"
+    )
+    parser.add_argument(
+        "--targets",
+        nargs="*",
+        help="Custom research targets/sources to focus on"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to JSON config file with domain settings"
+    )
+    return parser.parse_args()
+
+def load_config_from_file(config_path: str) -> KimiConfig:
+    """Load configuration from JSON file."""
+    try:
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+        
+        domain = config_data.get('domain', 'general')
+        research_targets = config_data.get('research_targets', [])
+        
+        return KimiConfig(domain, research_targets)
+    except Exception as e:
+        console.print(f"[bold red]Error loading config file: {e}[/bold red]")
+        return KimiConfig()  # Return default config
+
+# Global config instance (will be set in main())
+kimi_config = None
+
+# Default system prompt for backward compatibility
+system_PROMPT = get_system_prompt("content_research")
 
 # --------------------------------------------------------------------------------
 # 4. Helper functions (same as DeepSeek)
@@ -482,9 +583,14 @@ def normalize_path(path_str: str) -> str:
 # --------------------------------------------------------------------------------
 # 5. Conversation state
 # --------------------------------------------------------------------------------
-conversation_history = [
-    {"role": "system", "content": system_PROMPT}
-]
+def initialize_conversation():
+    """Initialize conversation history with current config."""
+    global conversation_history
+    conversation_history = [
+        {"role": "system", "content": kimi_config.system_prompt}
+    ]
+
+conversation_history = []
 
 # --------------------------------------------------------------------------------
 # 6. Tool execution functions
@@ -717,27 +823,50 @@ def kimi_chat_with_tools(user_message: str):
 # --------------------------------------------------------------------------------
 
 def main():
+    global kimi_config
+    
+    # Parse command line arguments
+    args = parse_args()
+    
+    # Initialize configuration
+    if args.config:
+        kimi_config = load_config_from_file(args.config)
+    else:
+        kimi_config = KimiConfig(args.domain, args.targets)
+    
+    # Initialize conversation with the configured system prompt
+    initialize_conversation()
+    
     # Create a beautiful gradient-style welcome panel
-    welcome_text = """[bold bright_magenta]🕵️‍♀️ Kimi Possible[/bold bright_magenta] [bright_cyan]AI Code Assistant[/bright_cyan]
-[dim magenta]Powered by Kimi-K2 with Function Calling[/dim magenta]"""
+    domain_display = kimi_config.domain.replace('_', ' ').title()
+    welcome_text = f"""[bold bright_magenta]🕵️‍♀️ Kimi Possible[/bold bright_magenta] [bright_cyan]AI Research Assistant[/bright_cyan]
+[dim magenta]Powered by Kimi-K2 • Domain: {domain_display}[/dim magenta]"""
     
     console.print(Panel.fit(
         welcome_text,
         border_style="bright_magenta",
         padding=(1, 2),
-        title="[bold bright_cyan]🕵️‍♀️ AI Code Assistant[/bold bright_cyan]",
+        title="[bold bright_cyan]🕵️‍♀️ AI Research Assistant[/bold bright_cyan]",
         title_align="center"
     ))
     
-    # Create an elegant instruction panel
-    instructions = """[bold bright_magenta]📁 File Operations:[/bold bright_magenta]
+    # Create an elegant instruction panel with domain info
+    targets_display = ""
+    if kimi_config.research_targets:
+        targets_list = "\n".join([f"    • {target}" for target in kimi_config.research_targets])
+        targets_display = f"\n\n[bold bright_magenta]🎯 Research Targets:[/bold bright_magenta]\n{targets_list}"
+    
+    instructions = f"""[bold bright_magenta]📁 File Operations:[/bold bright_magenta]
   • [bright_cyan]/add path/to/file[/bright_cyan] - Include a single file in conversation
   • [bright_cyan]/add path/to/folder[/bright_cyan] - Include all files in a folder
   • [dim]The AI can automatically read and create files using function calls[/dim]
 
-[bold bright_magenta]🎯 Commands:[/bold bright_magenta]
+[bold bright_magenta]🔧 Domain:[/bold bright_magenta] {domain_display}
+  • [dim]Optimized for {domain_display.lower()} tasks and research[/dim]{targets_display}
+
+[bold bright_magenta]⚙️ Commands:[/bold bright_magenta]
   • [bright_cyan]exit[/bright_cyan] or [bright_cyan]quit[/bright_cyan] - End the session
-  • Just ask naturally - the AI will handle file operations automatically!"""
+  • Just ask naturally - the AI will handle operations automatically!"""
     
     console.print(Panel(
         instructions,
